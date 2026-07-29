@@ -4279,11 +4279,15 @@ dependencies = [
  "solana-instruction",
  "solana-keypair",
  "solana-message",
+ "solana-sdk-ids",
  "solana-signer",
  "solana-transaction",
  "solana-transaction-error",
+ "solana-zk-sdk",
  "spl-discriminator",
  "spl-tlv-account-resolution",
+ "spl-token-confidential-transfer-proof-extraction",
+ "spl-token-confidential-transfer-proof-generation",
  "spl-transfer-hook-interface",
 ]
 

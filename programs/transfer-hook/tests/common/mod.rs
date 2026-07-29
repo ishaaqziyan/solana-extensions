@@ -7,7 +7,9 @@ use anchor_lang::{
     AccountDeserialize, InstructionData, ToAccountMetas,
 };
 use anchor_spl::token_interface::spl_token_2022::{
-    extension::{transfer_hook as transfer_hook_extension, ExtensionType},
+    extension::{
+        confidential_transfer, transfer_hook as transfer_hook_extension, ExtensionType,
+    },
     instruction as token_ix,
     state::{Account as TokenAccountState, Mint as MintState},
     ID as TOKEN_2022_ID,
@@ -32,6 +34,22 @@ const HOOK_ELF: &[u8] = include_bytes!(concat!(
     "/../../target/deploy/transfer_hook.so"
 ));
 
+/// Replaces litesvm's bundled Token-2022 program, which is built with
+/// `--no-default-features` (matching the verified mainnet binary) and so has
+/// `zk-ops` compiled out: every confidential-transfer instruction that moves
+/// value (`Deposit`, `Withdraw`, `Transfer`, `ApplyPendingBalance`,
+/// `TransferWithFee`) unconditionally returns `InvalidInstructionData`,
+/// regardless of account/mint state. Confirmed against upstream
+/// spl-token-2022 v10.0.0 source and the release's own verification notes
+/// (`solana-verify build ... -- --no-default-features`); see also
+/// https://github.com/LiteSVM/litesvm/issues/128.
+///
+/// Built locally from `solana-program/token-2022` tag `program@v10.0.0` with
+/// `cargo build-sbf` and default features (which include `zk-ops`), matching
+/// the `spl-token-2022-interface` 2.1.0 this crate already depends on.
+const TOKEN_2022_ZK_OPS_ELF: &[u8] =
+    include_bytes!("../fixtures/spl_token_2022_zk_ops.so");
+
 pub const DECIMALS: u8 = 6;
 
 pub struct Env {
@@ -50,6 +68,8 @@ impl Env {
         let mut svm = LiteSVM::new();
         svm.add_program(HOOK_PROGRAM_ID, HOOK_ELF)
             .expect("failed to load transfer_hook.so");
+        svm.add_program(TOKEN_2022_ID, TOKEN_2022_ZK_OPS_ELF)
+            .expect("failed to load zk-ops-enabled spl_token_2022.so");
 
         let issuer = Keypair::new();
         svm.airdrop(&issuer.pubkey(), 100 * 1_000_000_000).unwrap();
@@ -75,14 +95,15 @@ impl Env {
         env
     }
 
-    /// Token-2022 mint carrying `TransferHook` (wired to this program) and
-    /// `PermanentDelegate` (the issuer), matching the devnet mint minus the
-    /// confidential-transfer extension, which needs no hook involvement.
+    /// Token-2022 mint carrying all three extensions the compliance token uses:
+    /// `TransferHook` (wired to this program), `ConfidentialTransferMint`, and
+    /// `PermanentDelegate` (the issuer). Mirrors the devnet mint exactly.
     ///
     /// Every extension initializer must run before `InitializeMint2`.
     fn create_mint(&mut self, mint_keypair: &Keypair) {
         let space = ExtensionType::try_calculate_account_len::<MintState>(&[
             ExtensionType::TransferHook,
+            ExtensionType::ConfidentialTransferMint,
             ExtensionType::PermanentDelegate,
         ])
         .unwrap();
@@ -102,6 +123,14 @@ impl Env {
                 &self.mint,
                 Some(issuer),
                 Some(HOOK_PROGRAM_ID),
+            )
+            .unwrap(),
+            confidential_transfer::instruction::initialize_mint(
+                &TOKEN_2022_ID,
+                &self.mint,
+                Some(issuer),
+                true, // auto-approve, so holders need no issuer round-trip
+                None, // auditor key set per-test where it matters
             )
             .unwrap(),
             token_ix::initialize_permanent_delegate(&TOKEN_2022_ID, &self.mint, &issuer).unwrap(),
@@ -180,8 +209,12 @@ impl Env {
         let token_keypair = Keypair::new();
         let token_account = token_keypair.pubkey();
 
+        // `ConfidentialTransferAccount` is sized in up front even though only the
+        // confidential tests use it: `ConfigureAccount` cannot grow the account,
+        // so an account not sized for it can never be configured.
         let space = ExtensionType::try_calculate_account_len::<TokenAccountState>(&[
             ExtensionType::TransferHookAccount,
+            ExtensionType::ConfidentialTransferAccount,
         ])
         .unwrap();
         let lamports = self.svm.minimum_balance_for_rent_exemption(space);
