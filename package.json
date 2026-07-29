@@ -10,6 +10,8 @@
     "setup-allowlist": "node --env-file-if-exists=.env --import tsx scripts/setup-allowlist.ts",
     "demo-transfer": "node --env-file-if-exists=.env --import tsx scripts/demo-transfer.ts",
     "demo-clawback": "node --env-file-if-exists=.env --import tsx scripts/demo-clawback.ts",
+    "setup-webhook": "node --env-file-if-exists=.env --import tsx scripts/setup-webhook.ts",
+    "indexer": "cargo run --manifest-path indexer/Cargo.toml",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

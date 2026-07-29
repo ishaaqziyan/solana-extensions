@@ -17,3 +17,6 @@ work.md
 
 # Throwaway demo-holder keypairs. Devnet only, but still private keys.
 .keys
+
+# Indexer's event log — regenerated from webhook deliveries, not source.
+indexer/events.jsonl

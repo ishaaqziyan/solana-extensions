@@ -1,0 +1,20 @@
+[package]
+name = "indexer"
+version = "0.1.0"
+edition = "2021"
+description = "Helius webhook receiver + event log for the compliance-token demo (work.md §6)"
+
+[workspace]
+
+[dependencies]
+axum = "^0.8"
+dotenvy = "0.15"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[dev-dependencies]
+http-body-util = "0.1"
+tower = { version = "0.5", features = ["util"] }
