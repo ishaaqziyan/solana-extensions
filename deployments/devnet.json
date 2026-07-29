@@ -1,0 +1,10 @@
+{
+  "cluster": "devnet",
+  "hookProgramId": "DLfQ9dhxsXkur98Vze8L1sPHc14pVhkpdNSQqP3Qa3Bo",
+  "mint": "3eV7Ejpm3R5WVftW2G4dPatnfHXdGyW8ZrrTzURHnicT",
+  "allowlist": "ChNLQyCB6C23jfcRN1xhWj9dgtg4k138gRs4WN5HPJRX",
+  "extraAccountMetaList": "BgNWreTXr4YvvBBLnz7PS4XRH9y2T25186KYZCkKAChn",
+  "issuer": "2oE9AWmKKzJ2xMdJe4ay3wxebRxvYH27aymb3ZBMLFj2",
+  "decimals": 6,
+  "createdAt": "2026-07-29T06:57:57.995Z"
+}
