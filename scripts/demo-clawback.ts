@@ -1,19 +1,21 @@
 /**
- * Permanent delegate clawback: the issuer moves a holder's tokens without the
- * holder's signature (`work.md` §4.5).
+ * Permanent delegate clawback: the issuer seizes a sanctioned holder's tokens
+ * without the holder's signature (`work.md` §4.5).
  *
  * Run: `npm run demo-clawback`
  *
- * Runs three cases, because the interaction between the permanent delegate and
- * the transfer hook is the least obvious part of the design:
+ * The interesting property is the ordering. A compliance response sanctions a
+ * holder first — removing them from the allowlist — and seizes second. So the
+ * demo runs the realistic sequence:
  *
- *   1. Both parties allowlisted        — the clawback everyone expects
- *   2. Issuer removed from allowlist   — fails, issuer is the destination owner
- *   3. Holder removed from allowlist   — fails, holder is still the source owner
+ *   1. Sanction the holder (remove from allowlist)
+ *   2. Holder tries to move their own tokens  — rejected by the hook
+ *   3. Issuer seizes them as permanent delegate — succeeds
  *
- * Case 3 is the one that matters: it is the realistic sanctions sequence
- * (freeze the holder, then seize), and this hook design makes it impossible.
- * See the deep-dive for why and what to do about it.
+ * Step 3 only works because `execute` exempts the permanent-delegate path.
+ * Without that exemption the holder's own removal would make their tokens
+ * permanently unseizable, which is backwards. Step 2 is what proves the
+ * exemption is narrow: it applies to the delegate, not to the accounts.
  */
 import { PublicKey, Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
 
@@ -39,20 +41,14 @@ async function main() {
     const issuer = loadIssuer();
     const mint = new PublicKey(deployment.mint);
 
-    // Bob is the sanctioned holder. He holds tokens from demo-transfer.
     const bob = loadOrCreateHolder('bob');
+    const alice = loadOrCreateHolder('alice');
     console.log(`Issuer (permanent delegate): ${issuer.publicKey.toBase58()}`);
-    console.log(`Holder (target):             ${bob.publicKey.toBase58()}\n`);
+    console.log(`Holder (to be sanctioned):   ${bob.publicKey.toBase58()}\n`);
 
     const bobToken = await ensureTokenAccount(connection, issuer, mint, bob.publicKey);
+    const aliceToken = await ensureTokenAccount(connection, issuer, mint, alice.publicKey);
     const issuerToken = await ensureTokenAccount(connection, issuer, mint, issuer.publicKey);
-
-    const amount = toBaseUnits(CLAWBACK_AMOUNT);
-    if ((await balanceOf(connection, bobToken)) < amount) {
-        await setAllowlisted(bob.publicKey, true);
-        await mintTo(connection, issuer, mint, bobToken, toBaseUnits(TOP_UP_AMOUNT));
-        console.log(`Topped Bob up with ${TOP_UP_AMOUNT} so there is something to seize\n`);
-    }
 
     async function setAllowlisted(who: PublicKey, allowed: boolean) {
         const build = allowed ? createAddAddressInstruction : createRemoveAddressInstruction;
@@ -66,81 +62,89 @@ async function main() {
         });
     }
 
-    /**
-     * The clawback itself. Note who signs: `issuer` only.
-     *
-     * Bob's keypair is never touched — the permanent delegate is accepted by
-     * Token-2022 as the transfer authority over any account of this mint. That
-     * is the whole mechanism.
-     */
-    async function attemptClawback(label: string): Promise<string | null> {
-        const instruction = await buildHookTransfer(
-            connection,
-            bobToken,
-            mint,
-            issuerToken,
-            issuer.publicKey,
-            amount,
-        );
-        try {
-            const signature = await sendAndConfirmTransaction(
-                connection,
-                new Transaction().add(instruction),
-                [issuer],
-            );
-            console.log(`  ${label}: SUCCEEDED`);
-            console.log(`    ${explorerUrl(signature)}`);
-            return signature;
-        } catch (error: unknown) {
-            const name = hookErrorName(error);
-            if (!name) throw error;
-            console.log(`  ${label}: REJECTED by the hook — ${name}`);
-            return null;
-        }
+    const amount = toBaseUnits(CLAWBACK_AMOUNT);
+    if ((await balanceOf(connection, bobToken)) < amount) {
+        await setAllowlisted(bob.publicKey, true);
+        await mintTo(connection, issuer, mint, bobToken, toBaseUnits(TOP_UP_AMOUNT));
+        console.log(`Topped Bob up with ${TOP_UP_AMOUNT} so there is something to seize\n`);
     }
 
-    const before = await balanceOf(connection, bobToken);
-    console.log(`Bob's balance before: ${fromBaseUnits(before)}`);
-    console.log(`Clawing back ${CLAWBACK_AMOUNT}, signed by the issuer alone:\n`);
-
-    await setAllowlisted(bob.publicKey, true);
-    await setAllowlisted(issuer.publicKey, true);
-    const baseline = await attemptClawback('Both allowlisted        ');
-
-    await setAllowlisted(issuer.publicKey, false);
-    const withoutIssuer = await attemptClawback('Issuer not allowlisted  ');
-    await setAllowlisted(issuer.publicKey, true);
-
+    console.log(`Step 1 — sanction Bob by removing him from the allowlist`);
     await setAllowlisted(bob.publicKey, false);
-    const withoutHolder = await attemptClawback('Holder not allowlisted  ');
-    await setAllowlisted(bob.publicKey, true);
+    await setAllowlisted(alice.publicKey, true);
+    console.log(`  done\n`);
+
+    console.log(`Step 2 — Bob tries to move his own tokens to Alice`);
+    const bobTransfer = await buildHookTransfer(
+        connection,
+        bobToken,
+        mint,
+        aliceToken,
+        bob.publicKey,
+        amount,
+    );
+    let bobBlocked = false;
+    try {
+        await sendAndConfirmTransaction(connection, new Transaction().add(bobTransfer), [
+            issuer,
+            bob,
+        ]);
+        console.log(`  SUCCEEDED — the sanction is not being enforced`);
+    } catch (error: unknown) {
+        const name = hookErrorName(error);
+        if (!name) throw error;
+        console.log(`  REJECTED by the hook — ${name}`);
+        bobBlocked = true;
+    }
+
+    console.log(`\nStep 3 — issuer seizes ${CLAWBACK_AMOUNT} as permanent delegate`);
+    const before = await balanceOf(connection, bobToken);
+    const clawback = await buildHookTransfer(
+        connection,
+        bobToken,
+        mint,
+        issuerToken,
+        issuer.publicKey,
+        amount,
+    );
+
+    // Note the signer list: the issuer alone. Bob's keypair is loaded in this
+    // script only to prove step 2 — it plays no part in the seizure.
+    let seized = false;
+    try {
+        const signature = await sendAndConfirmTransaction(
+            connection,
+            new Transaction().add(clawback),
+            [issuer],
+        );
+        console.log(`  SUCCEEDED — no signature from Bob`);
+        console.log(`  ${explorerUrl(signature)}`);
+        seized = true;
+    } catch (error: unknown) {
+        const name = hookErrorName(error);
+        if (!name) throw error;
+        console.log(`  REJECTED by the hook — ${name}`);
+    }
 
     const after = await balanceOf(connection, bobToken);
-    console.log(`\nBob's balance after:  ${fromBaseUnits(after)}`);
-    console.log(`Seized:               ${fromBaseUnits(before - after)} (no signature from Bob)`);
+    console.log(`\nBob's balance: ${fromBaseUnits(before)} -> ${fromBaseUnits(after)}`);
+    console.log(`Seized:        ${fromBaseUnits(before - after)}`);
 
-    if (!baseline) {
-        console.error(`\nBaseline clawback failed — the permanent delegate path is broken.`);
-        process.exit(1);
-    }
+    // Restore, so the script is re-runnable.
+    await setAllowlisted(bob.publicKey, true);
 
-    if (withoutIssuer || withoutHolder) {
-        console.error(`\nA clawback succeeded that the hook should have rejected.`);
+    if (!bobBlocked || !seized) {
+        console.error(`\nUnexpected outcome — see the two failures above.`);
         process.exit(1);
     }
 
     console.log(`
-Both failure cases are real constraints of this design, not bugs in the demo:
+The sanctioned holder cannot move their own tokens, but the permanent delegate
+can still seize them. That ordering — freeze, then seize — is only possible
+because \`execute\` exempts the permanent-delegate path from the allowlist.
 
-  - The issuer must be on its own allowlist, because it is the destination
-    owner of the seizing transfer.
-  - The holder must STILL be on the allowlist, because they are the source
-    owner. Removing a holder to sanction them makes their tokens unseizable.
-
-The second is the wrong way round for a compliance token. See
-docs/extensions-deep-dive.md for the fix: exempt the permanent-delegate path
-inside \`execute\` by comparing the transfer authority against the mint's
-PermanentDelegate extension.`);
+Without the exemption, removing a holder from the allowlist would also make
+their tokens permanently unseizable. See docs/extensions-deep-dive.md.`);
 }
 
 main().catch((error: unknown) => {
