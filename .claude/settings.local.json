@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp -r /tmp/claude-1000/-home-iz-solana-extensions/f355214b-2afd-41a0-b85e-4f9e7a3d3c48/scratchpad/scaffold/transfer-hook/programs /home/iz/solana-extensions/)",
+      "Bash(cp /tmp/claude-1000/-home-iz-solana-extensions/f355214b-2afd-41a0-b85e-4f9e7a3d3c48/scratchpad/scaffold/transfer-hook/Cargo.toml /tmp/claude-1000/-home-iz-solana-extensions/f355214b-2afd-41a0-b85e-4f9e7a3d3c48/scratchpad/scaffold/transfer-hook/Anchor.toml /tmp/claude-1000/-home-iz-solana-extensions/f355214b-2afd-41a0-b85e-4f9e7a3d3c48/scratchpad/scaffold/transfer-hook/rust-toolchain.toml /tmp/claude-1000/-home-iz-solana-extensions/f355214b-2afd-41a0-b85e-4f9e7a3d3c48/scratchpad/scaffold/transfer-hook/.gitignore /tmp/claude-1000/-home-iz-solana-extensions/f355214b-2afd-41a0-b85e-4f9e7a3d3c48/scratchpad/scaffold/transfer-hook/.prettierignore /home/iz/solana-extensions/)",
+      "Bash(mkdir -p /home/iz/solana-extensions/target/deploy)",
+      "Bash(cp /tmp/claude-1000/-home-iz-solana-extensions/f355214b-2afd-41a0-b85e-4f9e7a3d3c48/scratchpad/scaffold/transfer-hook/target/deploy/transfer_hook-keypair.json /home/iz/solana-extensions/target/deploy/)",
+      "Bash(rm -f /home/iz/solana-extensions/programs/transfer-hook/src/instructions/increment.rs /home/iz/solana-extensions/programs/transfer-hook/tests/test_initialize.rs /home/iz/solana-extensions/programs/transfer-hook/src/instructions/initialize.rs)"
+    ]
+  }
+}
