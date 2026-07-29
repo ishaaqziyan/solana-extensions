@@ -75,11 +75,15 @@ impl Env {
         env
     }
 
-    /// Token-2022 mint carrying only the `TransferHook` extension, wired to this
-    /// program. The extension must be initialized before `InitializeMint2`.
+    /// Token-2022 mint carrying `TransferHook` (wired to this program) and
+    /// `PermanentDelegate` (the issuer), matching the devnet mint minus the
+    /// confidential-transfer extension, which needs no hook involvement.
+    ///
+    /// Every extension initializer must run before `InitializeMint2`.
     fn create_mint(&mut self, mint_keypair: &Keypair) {
         let space = ExtensionType::try_calculate_account_len::<MintState>(&[
             ExtensionType::TransferHook,
+            ExtensionType::PermanentDelegate,
         ])
         .unwrap();
         let lamports = self.svm.minimum_balance_for_rent_exemption(space);
@@ -100,6 +104,7 @@ impl Env {
                 Some(HOOK_PROGRAM_ID),
             )
             .unwrap(),
+            token_ix::initialize_permanent_delegate(&TOKEN_2022_ID, &self.mint, &issuer).unwrap(),
             token_ix::initialize_mint2(&TOKEN_2022_ID, &self.mint, &issuer, None, DECIMALS).unwrap(),
         ];
 
@@ -291,6 +296,41 @@ impl Env {
         let issuer_keypair = self.issuer.insecure_clone();
         let owner = owner.insecure_clone();
         self.send(&[instruction], &[&issuer_keypair, &owner])
+    }
+
+    /// Permanent-delegate clawback: the issuer moves a holder's tokens with only
+    /// its own signature. The holder's keypair is deliberately not involved.
+    pub fn clawback(
+        &mut self,
+        source: &Pubkey,
+        destination: &Pubkey,
+        amount: u64,
+    ) -> TransactionResult {
+        let issuer = self.issuer.pubkey();
+        let mut instruction = token_ix::transfer_checked(
+            &TOKEN_2022_ID,
+            source,
+            &self.mint,
+            destination,
+            &issuer,
+            &[],
+            amount,
+            DECIMALS,
+        )
+        .unwrap();
+
+        instruction
+            .accounts
+            .push(AccountMeta::new_readonly(self.allowlist, false));
+        instruction
+            .accounts
+            .push(AccountMeta::new_readonly(HOOK_PROGRAM_ID, false));
+        instruction
+            .accounts
+            .push(AccountMeta::new_readonly(self.extra_account_meta_list, false));
+
+        let issuer_keypair = self.issuer.insecure_clone();
+        self.send(&[instruction], &[&issuer_keypair])
     }
 
     /// Calls `execute` directly rather than through a Token-2022 transfer, which

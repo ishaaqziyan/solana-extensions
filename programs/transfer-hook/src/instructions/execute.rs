@@ -2,9 +2,10 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{
     spl_token_2022::{
         extension::{
-            transfer_hook::TransferHookAccount, BaseStateWithExtensions, PodStateWithExtensions,
+            permanent_delegate::get_permanent_delegate, transfer_hook::TransferHookAccount,
+            BaseStateWithExtensions, PodStateWithExtensions,
         },
-        pod::PodAccount,
+        pod::{PodAccount, PodMint},
     },
     Mint, TokenAccount,
 };
@@ -58,9 +59,33 @@ fn require_transferring(account: &AccountInfo) -> Result<()> {
     Ok(())
 }
 
+/// The mint's permanent delegate, or `None` if the extension is absent or unset.
+fn permanent_delegate(mint: &AccountInfo) -> Result<Option<Pubkey>> {
+    let data = mint.try_borrow_data()?;
+    let state = PodStateWithExtensions::<PodMint>::unpack(&data)?;
+    Ok(get_permanent_delegate(&state))
+}
+
 pub fn handle_execute(ctx: Context<Execute>, amount: u64) -> Result<()> {
     require_transferring(&ctx.accounts.source_token.to_account_info())?;
     require_transferring(&ctx.accounts.destination_token.to_account_info())?;
+
+    // A permanent-delegate clawback is exempt from the allowlist.
+    //
+    // Without this, seizure is only possible while the holder is still
+    // allowlisted — and sanctioning a holder means removing them first. That
+    // ordering makes the tokens unseizable exactly when seizure is called for,
+    // which is backwards for a regulated asset: the correct sequence is freeze,
+    // then seize.
+    //
+    // Safe because Token-2022 has already verified the delegate's signature by
+    // the time it invokes this hook, and `require_transferring` above rules out
+    // a direct call carrying a forged authority.
+    let delegate = permanent_delegate(&ctx.accounts.mint.to_account_info())?;
+    if delegate == Some(ctx.accounts.owner.key()) {
+        msg!("Permanent delegate clawback of {} — allowlist not enforced", amount);
+        return Ok(());
+    }
 
     let allowlist = &ctx.accounts.allowlist;
 

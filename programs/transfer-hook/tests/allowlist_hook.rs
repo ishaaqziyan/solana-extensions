@@ -192,6 +192,54 @@ fn removing_the_sender_blocks_further_transfers() {
 }
 
 #[test]
+fn clawback_succeeds_even_when_the_holder_is_not_allowlisted() {
+    let mut env = Env::new();
+    let issuer = env.issuer.insecure_clone();
+
+    let (holder, holder_token) = env.new_holder();
+    let (_issuer_wallet, issuer_token) = env.new_holder();
+
+    // Fund the holder while they are still permitted to receive.
+    env.add_address(&holder.pubkey(), &issuer).unwrap();
+    env.mint_to(&holder_token, 10 * ONE_TOKEN);
+
+    // Sanction them: remove from the allowlist, which is what a real compliance
+    // response does before seizing. Ordinary transfers are now blocked.
+    env.remove_address(&holder.pubkey(), &issuer).unwrap();
+
+    // The destination is not allowlisted either, and neither is the issuer.
+    // The permanent-delegate exemption must not depend on any of that.
+    env.clawback(&holder_token, &issuer_token, 4 * ONE_TOKEN)
+        .expect("permanent delegate clawback must bypass the allowlist");
+
+    assert_eq!(env.token_balance(&holder_token), 6 * ONE_TOKEN);
+    assert_eq!(env.token_balance(&issuer_token), 4 * ONE_TOKEN);
+}
+
+#[test]
+fn clawback_exemption_does_not_leak_to_ordinary_transfers() {
+    let mut env = Env::new();
+    let issuer = env.issuer.insecure_clone();
+
+    let (sender, sender_token) = env.new_holder();
+    let (recipient, recipient_token) = env.new_holder();
+
+    env.add_address(&sender.pubkey(), &issuer).unwrap();
+    env.add_address(&recipient.pubkey(), &issuer).unwrap();
+    env.mint_to(&sender_token, 10 * ONE_TOKEN);
+    env.remove_address(&sender.pubkey(), &issuer).unwrap();
+
+    // Same accounts and amount as a clawback, but the holder signs rather than
+    // the permanent delegate — so the allowlist must still be enforced.
+    let result = env.transfer(&sender_token, &recipient_token, &sender, ONE_TOKEN);
+    assert_eq!(
+        custom_error_code(result),
+        u32::from(HookError::SenderNotAllowlisted)
+    );
+    assert_eq!(env.token_balance(&sender_token), 10 * ONE_TOKEN);
+}
+
+#[test]
 fn execute_rejects_direct_invocation() {
     let mut env = Env::new();
     let issuer = env.issuer.insecure_clone();
