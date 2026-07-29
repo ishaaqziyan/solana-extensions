@@ -14,3 +14,6 @@ work.md
 .env
 .env.*
 !.env.example
+
+# Throwaway demo-holder keypairs. Devnet only, but still private keys.
+.keys
