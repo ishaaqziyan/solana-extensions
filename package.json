@@ -5,11 +5,11 @@
   "type": "module",
   "description": "Demo scripts for the Token-2022 compliance token: mint creation, allowlist setup, transfers, clawback",
   "scripts": {
-    "create-mint": "tsx scripts/create-mint.ts",
-    "show": "tsx scripts/show-deployment.ts",
-    "setup-allowlist": "tsx scripts/setup-allowlist.ts",
-    "demo-transfer": "tsx scripts/demo-transfer.ts",
-    "demo-clawback": "tsx scripts/demo-clawback.ts",
+    "create-mint": "node --env-file-if-exists=.env --import tsx scripts/create-mint.ts",
+    "show": "node --env-file-if-exists=.env --import tsx scripts/show-deployment.ts",
+    "setup-allowlist": "node --env-file-if-exists=.env --import tsx scripts/setup-allowlist.ts",
+    "demo-transfer": "node --env-file-if-exists=.env --import tsx scripts/demo-transfer.ts",
+    "demo-clawback": "node --env-file-if-exists=.env --import tsx scripts/demo-clawback.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

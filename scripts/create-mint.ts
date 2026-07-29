@@ -25,8 +25,10 @@ import {
 } from '@solana/spl-token';
 
 import {
+    CLUSTER,
     DECIMALS,
     HOOK_PROGRAM_ID,
+    env,
     explorerUrl,
     getConnection,
     loadIssuer,
@@ -51,7 +53,7 @@ import {
  * without recreating the mint.
  */
 function auditorElGamalPubkey(): Uint8Array | null {
-    const encoded = process.env.AUDITOR_ELGAMAL_PUBKEY;
+    const encoded = env('AUDITOR_ELGAMAL_PUBKEY');
     if (!encoded) return null;
 
     const bytes = Buffer.from(encoded, 'base64');
@@ -155,7 +157,7 @@ async function main() {
     console.log(`  ${explorerUrl(setupSignature)}`);
 
     const path = saveDeployment({
-        cluster: process.env.CLUSTER ?? 'devnet',
+        cluster: CLUSTER,
         hookProgramId: HOOK_PROGRAM_ID.toBase58(),
         mint: mint.toBase58(),
         allowlist: allowlist.toBase58(),

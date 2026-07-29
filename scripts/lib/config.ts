@@ -16,8 +16,21 @@ export const REPO_ROOT = resolve(here, '../..');
  * confidential-transfer flow lives in the Rust litesvm tests rather than here.
  * See `yesterday.md` for the gate status and the full reasoning.
  */
-export const RPC_URL = process.env.RPC_URL ?? 'https://api.devnet.solana.com';
-export const CLUSTER = process.env.CLUSTER ?? 'devnet';
+/**
+ * Reads an env var, treating blank as unset.
+ *
+ * `.env.example` ships every optional key present but empty, so a copied `.env`
+ * yields `""` rather than `undefined` — and `??` would pass that through. An
+ * empty `RPC_URL` reaching `new Connection()` fails with a confusing
+ * "Endpoint URL must start with http:" rather than falling back to the default.
+ */
+export function env(name: string): string | undefined {
+    const value = process.env[name]?.trim();
+    return value ? value : undefined;
+}
+
+export const RPC_URL = env('RPC_URL') ?? 'https://api.devnet.solana.com';
+export const CLUSTER = env('CLUSTER') ?? 'devnet';
 
 export const DECIMALS = 6;
 
@@ -33,7 +46,7 @@ export function getConnection(): Connection {
  * `work.md` §3 collapses all three admin roles into one key for the MVP.
  */
 export function loadIssuer(): Keypair {
-    const path = process.env.ISSUER_KEYPAIR ?? resolve(homedir(), '.config/solana/id.json');
+    const path = env('ISSUER_KEYPAIR') ?? resolve(homedir(), '.config/solana/id.json');
     const secret = JSON.parse(readFileSync(path, 'utf8')) as number[];
     return Keypair.fromSecretKey(Uint8Array.from(secret));
 }

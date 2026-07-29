@@ -6,5 +6,11 @@ node_modules
 test-ledger
 .yarn
 .surfpool
+
 yesterday.md
 work.md
+
+# Secrets — never commit. .env.example is the tracked template.
+.env
+.env.*
+!.env.example
