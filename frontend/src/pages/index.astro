@@ -1,0 +1,11 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import App from '../components/App.tsx';
+import { loadDeployment } from '../lib/deployment';
+
+const deployment = loadDeployment();
+---
+
+<BaseLayout title="Compliance Token">
+    <App client:only="preact" deployment={deployment} />
+</BaseLayout>

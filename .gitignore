@@ -20,3 +20,7 @@ work.md
 
 # Indexer's event log — regenerated from webhook deliveries, not source.
 indexer/events.jsonl
+
+# Astro build output and generated types.
+frontend/dist
+frontend/.astro
