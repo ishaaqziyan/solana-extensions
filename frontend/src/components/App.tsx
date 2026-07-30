@@ -4,8 +4,11 @@
  * rather than each panel hydrating its own — otherwise reconnecting would be
  * per-panel, which is bad UX and not what a real wallet integration does.
  */
-import { useMemo } from 'preact/hooks';
+import '../lib/polyfills';
+
+import { useCallback, useMemo } from 'preact/hooks';
 import { ConnectionProvider, WalletProvider, useWallet } from '@solana/wallet-adapter-react';
+import type { WalletError } from '@solana/wallet-adapter-base';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
@@ -53,9 +56,22 @@ function Dashboard({ deployment }: Props) {
 export default function App({ deployment }: Props) {
     const endpoint = useMemo(() => getConnection(deployment).rpcEndpoint, [deployment]);
 
+    // The library's own default onError just console.errors everything,
+    // including a plain "no thanks" click in the wallet's own popup — that's
+    // expected user behavior, not a bug, so it's downgraded to console.debug.
+    // Anything else (a real connection/transport failure) still surfaces as
+    // an error.
+    const onWalletError = useCallback((error: WalletError) => {
+        if (/rejected/i.test(error.message)) {
+            console.debug('Wallet connection declined by user:', error.message);
+            return;
+        }
+        console.error(error);
+    }, []);
+
     return (
         <ConnectionProvider endpoint={endpoint}>
-            <WalletProvider wallets={[]} autoConnect>
+            <WalletProvider wallets={[]} autoConnect onError={onWalletError}>
                 <WalletModalProvider>
                     <div class="mx-auto max-w-3xl space-y-6 p-6">
                         <header class="flex flex-wrap items-center justify-between gap-4">

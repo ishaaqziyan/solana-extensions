@@ -93,6 +93,47 @@ export interface HolderKeys {
 }
 
 /**
+ * Wraps a payload in Solana's official off-chain-message envelope
+ * (`solana-offchain-message` crate, version 0, `RestrictedAscii` format):
+ * `0xff "solana offchain" | version(1)=0 | format(1)=0 | length(2 LE) | payload`.
+ *
+ * `ElGamalKeypair.signerMessage`/`AeKey.signerMessage` return raw bytes
+ * (`"ElGamalSecretKey"`/`"AeKey"` + the token account pubkey) with no domain
+ * separation from transaction wire format. Some wallets refuse `signMessage`
+ * outright for payloads their own heuristic flags as maybe-a-transaction —
+ * confirmed this isn't a real `Transaction`/`VersionedTransaction` (both
+ * throw on these bytes), so it's the wallet's own opaque check, not a parse
+ * false-positive we can fix by inspecting our own code. The `0xff` prefix is
+ * the recognized, documented marker wallets check for to allow signing a
+ * message unconditionally.
+ *
+ * Hex-encoding the payload (rather than passing it raw) keeps the inner
+ * message printable ASCII, satisfying the spec's `RestrictedAscii` format
+ * even though the payload itself is binary.
+ *
+ * `ElGamalKeypair.fromSignature`/`AeKey.fromSignature` derive purely from
+ * the signature bytes, not the signed message, so wrapping the message
+ * changes nothing about the derived key's correctness — it only needs to be
+ * deterministic per (wallet, token account). Tradeoff: this makes the
+ * derived keys specific to this frontend rather than matching whatever raw
+ * message an external tool (e.g. the spl-token-2022 CLI) might sign for the
+ * same account — acceptable here since work.md scopes this demo as
+ * self-contained, no external-tool interop.
+ */
+function wrapOffchainMessage(payload: Uint8Array): Uint8Array {
+    const SIGNING_DOMAIN = new Uint8Array([0xff, ...new TextEncoder().encode('solana offchain')]);
+    const hex = Buffer.from(payload).toString('hex');
+    const messageBytes = new TextEncoder().encode(hex);
+
+    const header = new Uint8Array(1 + 1 + 2);
+    header[0] = 0; // version 0
+    header[1] = 0; // format 0 = RestrictedAscii
+    new DataView(header.buffer).setUint16(2, messageBytes.length, true);
+
+    return new Uint8Array([...SIGNING_DOMAIN, ...header, ...messageBytes]);
+}
+
+/**
  * Derives both confidential-transfer keys from two wallet signatures — no
  * local storage, no separate secret to back up. The holder can always
  * recover the same keys for the same token account by reconnecting the same
@@ -108,11 +149,11 @@ export async function deriveHolderKeys(
 ): Promise<HolderKeys> {
     const seed = tokenAccount.toBytes();
 
-    const elgamalMessage = ElGamalKeypair.signerMessage(seed);
+    const elgamalMessage = wrapOffchainMessage(ElGamalKeypair.signerMessage(seed));
     const elgamalSignature = await signMessage(elgamalMessage);
     const elgamal = ElGamalKeypair.fromSignature(elgamalSignature);
 
-    const aesMessage = AeKey.signerMessage(seed);
+    const aesMessage = wrapOffchainMessage(AeKey.signerMessage(seed));
     const aesSignature = await signMessage(aesMessage);
     const aes = AeKey.fromSignature(aesSignature);
 

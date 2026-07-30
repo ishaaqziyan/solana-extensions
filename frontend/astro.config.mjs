@@ -8,7 +8,16 @@ import tailwindcss from '@tailwindcss/vite';
 // hooks package is the only maintained option for wallet connect.
 export default defineConfig({
     integrations: [preact({ compat: true })],
+    devToolbar: { enabled: false },
     vite: {
         plugins: [tailwindcss()],
+        // @solana/zk-sdk is wasm-bindgen output using native ESM wasm
+        // integration. esbuild's dep pre-bundling (optimizeDeps) doesn't
+        // understand that import form and mangles it — the wasm module's
+        // exports come back undefined, breaking wasm-bindgen's own init.
+        // Excluding it lets Vite's dev server import the wasm natively instead.
+        optimizeDeps: {
+            exclude: ['@solana/zk-sdk'],
+        },
     },
 });

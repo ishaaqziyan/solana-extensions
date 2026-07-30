@@ -34,7 +34,10 @@ export default function TransferForm({ deployment }: Props) {
 
     async function sendPublic(event: Event) {
         event.preventDefault();
-        if (!publicKey) return;
+        if (!publicKey) {
+            setStatus({ kind: 'error', message: 'Connect a wallet first.' });
+            return;
+        }
         setStatus({ kind: 'busy' });
         try {
             const rawAmount = BigInt(Math.round(Number(amount) * 10 ** deployment.decimals));
