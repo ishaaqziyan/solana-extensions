@@ -8,6 +8,7 @@
     "create-mint": "node --env-file-if-exists=.env --import tsx scripts/create-mint.ts",
     "show": "node --env-file-if-exists=.env --import tsx scripts/show-deployment.ts",
     "setup-allowlist": "node --env-file-if-exists=.env --import tsx scripts/setup-allowlist.ts",
+    "sync-known-accounts": "node --env-file-if-exists=.env --import tsx scripts/sync-known-accounts.ts",
     "demo-transfer": "node --env-file-if-exists=.env --import tsx scripts/demo-transfer.ts",
     "demo-clawback": "node --env-file-if-exists=.env --import tsx scripts/demo-clawback.ts",
     "setup-webhook": "node --env-file-if-exists=.env --import tsx scripts/setup-webhook.ts",

@@ -15,7 +15,7 @@
  */
 import { PublicKey } from '@solana/web3.js';
 
-import { loadIssuer, loadDeployment, saveKnownAccounts, type KnownAccount } from './lib/config.js';
+import { loadDeployment, saveKnownAccounts, type KnownAccount } from './lib/config.js';
 import { listHolders, loadOrCreateHolder } from './lib/holders.js';
 import { ataFor } from './lib/token.js';
 

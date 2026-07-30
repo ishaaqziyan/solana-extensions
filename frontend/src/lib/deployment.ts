@@ -10,6 +10,11 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+export interface KnownAccount {
+    owner: string;
+    tokenAccount: string;
+}
+
 export interface Deployment {
     cluster: string;
     hookProgramId: string;
@@ -19,6 +24,8 @@ export interface Deployment {
     issuer: string;
     decimals: number;
     createdAt: string;
+    /** Named holder token accounts — see `scripts/sync-known-accounts.ts`. */
+    knownAccounts?: Record<string, KnownAccount>;
 }
 
 /**

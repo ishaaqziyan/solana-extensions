@@ -6,5 +6,19 @@
   "extraAccountMetaList": "BgNWreTXr4YvvBBLnz7PS4XRH9y2T25186KYZCkKAChn",
   "issuer": "2oE9AWmKKzJ2xMdJe4ay3wxebRxvYH27aymb3ZBMLFj2",
   "decimals": 6,
-  "createdAt": "2026-07-29T06:57:57.995Z"
+  "createdAt": "2026-07-29T06:57:57.995Z",
+  "knownAccounts": {
+    "issuer": {
+      "owner": "2oE9AWmKKzJ2xMdJe4ay3wxebRxvYH27aymb3ZBMLFj2",
+      "tokenAccount": "BfmerKUErSfevXK1xRFmqXHcjtm4tqunA38DWf94kKYo"
+    },
+    "alice": {
+      "owner": "4DRz4YfMDgYx241Tf2P9UDptxCBMrPQHjdkNkj3UWnZR",
+      "tokenAccount": "2aYZ4cyohCN1tKZ8Bx4JfMABtiJGdwKQXb2ubPrmtGcp"
+    },
+    "bob": {
+      "owner": "G8oqJj99yedbMjVD27QtFQF4bg7XdTkit631h6KNiGGQ",
+      "tokenAccount": "DFs1Kq6jKHhQxSi7p4ne1XwHfzFiXoZjunxZRqfGejPz"
+    }
+  }
 }

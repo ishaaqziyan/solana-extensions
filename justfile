@@ -44,6 +44,11 @@ demo-transfer:
 demo-clawback:
     npm run demo-clawback
 
+# Write issuer/holder token accounts into deployments/devnet.json so the
+# frontend can offer a picker instead of pasted addresses.
+sync-known-accounts:
+    npm run sync-known-accounts
+
 # Register the Helius webhook (needs INDEXER_PUBLIC_URL — e.g. `ngrok http 8787`).
 setup-webhook:
     npm run setup-webhook

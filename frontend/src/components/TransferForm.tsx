@@ -15,6 +15,7 @@ import { decodeConfidentialTransferAccount, decodeConfidentialTransferMintAudito
 import { transferSplitProofData } from '../lib/confidentialProofs';
 import { appendHookAccounts, createTransferInstructions } from '../lib/zkProofHelpers';
 import { ElGamalPubkey } from '@solana/zk-sdk/bundler';
+import AccountPicker from './AccountPicker';
 
 interface Props {
     deployment: Deployment;
@@ -163,24 +164,18 @@ export default function TransferForm({ deployment }: Props) {
             </p>
 
             <form class="mt-3 flex flex-wrap items-end gap-3" onSubmit={mode === 'public' ? sendPublic : sendConfidential}>
-                <label class="flex-1 min-w-[14rem] text-sm">
-                    <span class="block text-slate-600 dark:text-slate-400">From token account</span>
-                    <input
-                        class="mt-1 w-full rounded border border-slate-300 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900"
-                        value={source}
-                        onInput={(e) => setSource((e.target as HTMLInputElement).value)}
-                        required
-                    />
-                </label>
-                <label class="flex-1 min-w-[14rem] text-sm">
-                    <span class="block text-slate-600 dark:text-slate-400">To token account</span>
-                    <input
-                        class="mt-1 w-full rounded border border-slate-300 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900"
-                        value={destination}
-                        onInput={(e) => setDestination((e.target as HTMLInputElement).value)}
-                        required
-                    />
-                </label>
+                <AccountPicker
+                    deployment={deployment}
+                    label="From token account"
+                    value={source}
+                    onChange={setSource}
+                />
+                <AccountPicker
+                    deployment={deployment}
+                    label="To token account"
+                    value={destination}
+                    onChange={setDestination}
+                />
                 <label class="w-32 text-sm">
                     <span class="block text-slate-600 dark:text-slate-400">Amount</span>
                     <input
