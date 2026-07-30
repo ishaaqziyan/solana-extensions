@@ -15,10 +15,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@1.89.0
-        with:
-          components: rustfmt, clippy
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config build-essential libudev-dev
+
+      - name: Install Rust toolchains
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup toolchain install 1.89.0 --profile minimal -c rustfmt,clippy
+          rustup default stable
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
