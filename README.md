@@ -1,5 +1,7 @@
 # Solana Token Extensions Compliance Token
 
+[![Tests](https://github.com/ishaaqziyan/solana-extensions/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/ishaaqziyan/solana-extensions/actions/workflows/test.yml)
+
 A regulated-asset reference token built on SPL Token-2022, stacking three
 extensions on a single mint: a **transfer hook** enforcing an on-chain
 allowlist, **confidential transfers** hiding amounts from the public ledger,
