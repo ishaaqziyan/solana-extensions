@@ -47,9 +47,10 @@ async fn main() {
         .expect("indexer/ has a parent directory")
         .to_path_buf();
 
-    // Mirrors the TS scripts' `--env-file-if-exists=.env`: same repo-root
-    // `.env`, same "copy .env.example and fill in" story for every part of
-    // this project. Missing file is fine — real env vars still work.
+    // Standalone fallback for running `cargo run` directly, bypassing
+    // `npm run indexer` (which wraps this in `doppler run --`). Doesn't
+    // override already-set env vars, so Doppler-injected values still win.
+    // Missing file is fine — real env vars still work.
     let _ = dotenvy::from_path(repo_root.join(".env"));
 
     let cluster = env_var("CLUSTER").unwrap_or_else(|| "devnet".to_string());

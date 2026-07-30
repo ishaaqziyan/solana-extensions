@@ -60,8 +60,13 @@ just install           # npm install, both root and frontend/
 cp .env.example .env   # fill in as needed, see comments in the file
 ```
 
-`.env` is optional for read-only commands (`npm run show`) but required for
-anything that sends transactions or runs the indexer.
+Root npm scripts (and `npm run indexer`) run through Doppler (`doppler run --
+...`), so secrets come from the linked Doppler project/config, not `.env`.
+Run `doppler login` and `doppler setup` once per machine to link this repo.
+`.env` still works as a standalone fallback if you invoke a script directly
+without the `doppler run` wrapper (e.g. `node --env-file-if-exists=.env
+--import tsx scripts/create-mint.ts`) — useful for `npm run show` and other
+read-only commands where secrets aren't required at all.
 
 ## Quick start
 
