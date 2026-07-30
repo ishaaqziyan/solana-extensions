@@ -33,6 +33,12 @@ jobs:
           echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
 
       - name: Install Anchor CLI
+        env:
+          # rust-toolchain.toml at repo root pins 1.89.0 for any cargo run from
+          # here, overriding `rustup default` — avm's own deps need newer rustc,
+          # so force stable explicitly for this step (covers avm's internal
+          # cargo invocations too, not just the top-level `cargo install`).
+          RUSTUP_TOOLCHAIN: stable
         run: |
           cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
           avm install "$ANCHOR_VERSION"
