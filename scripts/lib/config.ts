@@ -51,6 +51,11 @@ export function loadIssuer(): Keypair {
     return Keypair.fromSecretKey(Uint8Array.from(secret));
 }
 
+export interface KnownAccount {
+    owner: string;
+    tokenAccount: string;
+}
+
 export interface Deployment {
     cluster: string;
     hookProgramId: string;
@@ -60,6 +65,13 @@ export interface Deployment {
     issuer: string;
     decimals: number;
     createdAt: string;
+    /**
+     * Named holder token accounts (issuer, demo holders) — purely public info
+     * (owner pubkey + ATA), never a secret key. Lets the frontend offer a
+     * picker instead of making a user paste raw addresses. Optional: absent
+     * until `npm run sync-known-accounts` has been run at least once.
+     */
+    knownAccounts?: Record<string, KnownAccount>;
 }
 
 function deploymentPath(): string {
@@ -81,6 +93,13 @@ export function loadDeployment(): Deployment {
     } catch {
         throw new Error(`No deployment found at ${path}. Run \`npm run create-mint\` first.`);
     }
+}
+
+/** Merges the given named accounts into the deployment's `knownAccounts` and saves. */
+export function saveKnownAccounts(accounts: Record<string, KnownAccount>): void {
+    const deployment = loadDeployment();
+    deployment.knownAccounts = { ...deployment.knownAccounts, ...accounts };
+    saveDeployment(deployment);
 }
 
 export function explorerUrl(signatureOrAddress: string, kind: 'tx' | 'address' = 'tx'): string {
