@@ -5,14 +5,14 @@
   "type": "module",
   "description": "Demo scripts for the Token-2022 compliance token: mint creation, allowlist setup, transfers, clawback",
   "scripts": {
-    "create-mint": "node --env-file-if-exists=.env --import tsx scripts/create-mint.ts",
-    "show": "node --env-file-if-exists=.env --import tsx scripts/show-deployment.ts",
-    "setup-allowlist": "node --env-file-if-exists=.env --import tsx scripts/setup-allowlist.ts",
-    "sync-known-accounts": "node --env-file-if-exists=.env --import tsx scripts/sync-known-accounts.ts",
-    "demo-transfer": "node --env-file-if-exists=.env --import tsx scripts/demo-transfer.ts",
-    "demo-clawback": "node --env-file-if-exists=.env --import tsx scripts/demo-clawback.ts",
-    "setup-webhook": "node --env-file-if-exists=.env --import tsx scripts/setup-webhook.ts",
-    "indexer": "cargo run --manifest-path indexer/Cargo.toml",
+    "create-mint": "doppler run -- node --import tsx scripts/create-mint.ts",
+    "show": "doppler run -- node --import tsx scripts/show-deployment.ts",
+    "setup-allowlist": "doppler run -- node --import tsx scripts/setup-allowlist.ts",
+    "sync-known-accounts": "doppler run -- node --import tsx scripts/sync-known-accounts.ts",
+    "demo-transfer": "doppler run -- node --import tsx scripts/demo-transfer.ts",
+    "demo-clawback": "doppler run -- node --import tsx scripts/demo-clawback.ts",
+    "setup-webhook": "doppler run -- node --import tsx scripts/setup-webhook.ts",
+    "indexer": "doppler run -- cargo run --manifest-path indexer/Cargo.toml",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
